@@ -24,3 +24,5 @@ sessiondata.csv
 metadata.csv
 *.docx
 *.log
+metadata-analysis/metadata/*.txt
+metadata-analysis/metadata/*.csv

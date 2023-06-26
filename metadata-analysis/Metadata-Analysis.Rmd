@@ -14,6 +14,8 @@ library(lubridate)
 library(patchwork)
 library(gt)
 library(scales)
+library(dplyr)
+library(openxlsx)
 
 # Ignore this but don't remove it :)---------------------------------------
 
@@ -21,7 +23,7 @@ library(scales)
 # every week or so, so by putting it here, it is updating the EvaChecks.xlsx
 # document on GitHub in case there were any edits to checks!
 
-source(here("app_checks.R"))
+#source(here("app_checks.R"))
 
 # Instructions ------------------------------------------------------------
 
@@ -63,6 +65,12 @@ new_way <-
            Event %in% c("Successful upload") ~ "Successful upload",
            TRUE ~ "Other"
          ))
+
+session_data <-
+  read_csv(here("metadata-analysis/metadata/sessiondata.csv")) %>% # <- don't change this
+  # ^ change where your file is in your project directory
+  select("SessionID" = SessionToken,
+         "Date" = Datestamp, SoftwareName)
 
 # building dataset
 visits_df <- data.frame(everything = visits) %>%
@@ -106,6 +114,9 @@ staging <- rbind(new_way, old_way) %>%
          WeekEnding = as.Date(WeekEnding),
          MonthEnding = as.Date(MonthEnding))
 
+combined_data <- full_join(staging, session_data, by = "SessionID", relationship = "many-to-many") %>%
+  group_by(SessionID)
+
 all_week <- staging %>%
   filter(WeekEnding >= ceiling_date(max(ymd_hms(staging$Date)),
                                    unit = "week")- weeks(8))
@@ -114,6 +125,10 @@ all_month <- staging %>%
   filter(MonthEnding < ceiling_date(max(ymd_hms(staging$Date)),
                                    unit = "month"))
 
+all_combined <- combined_data %>%
+  filter(WeekEnding >= ceiling_date(max(ymd_hms(staging$Date)),
+                                   unit = "week")- weeks(8))
+
 counts_by_week <- count(all_week, WeekEnding, Event) %>%
   arrange(WeekEnding, desc(n))
 
@@ -121,6 +136,9 @@ counts_by_month <- count(all_month, MonthEnding, Event) %>%
   arrange(MonthEnding, desc(n))
 
 counts_category <- count(all_week, WeekEnding, EventCategory) %>%
+  arrange(WeekEnding, desc(n))
+
+counts_software <- count(all_combined, WeekEnding, SoftwareName) %>%
   arrange(WeekEnding, desc(n))
 
 ```
@@ -149,6 +167,33 @@ counts_by_week %>%
   theme_minimal() +
   theme(legend.position = "bottom")
   
+```
+
+```{r fig.width=10, fig.height=5}
+
+counts_by_month %>%
+  filter(Event == "Site hits") %>%
+  ggplot(aes(x = MonthEnding, y = n, group = Event, color = Event, label = n)) +
+  geom_line() +
+  geom_point() +
+  geom_text(nudge_x = .5, color = "gray15", check_overlap = TRUE) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%m-%y") +
+  labs(
+    title = "Eva Site Hits",
+    x = "Month Ending",
+    y = ""
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+  
+```
+
+```{r fig.width=10, fig.height=5}
+
+counts_software %>%
+  ggplot(aes(x = SoftwareName, y = n))
+         
 ```
 
 ## Uploads
