@@ -215,6 +215,21 @@ mult_enrollments <- Enrollment %>%
   summarise(NumPersonalID = n()) %>%
   pull(NumPersonalID)
 
+# Gender information ----------------------------
+
+gender_df <- Client %>%
+  select(AmIndAKNative,
+         Asian,
+         BlackAfAmerican,
+         NativeHIPacific,
+         White)
+
+number_genders <- colSums(gender_df)
+
+min_gender <- min(number_genders)
+print (min_gender)
+
+
 sample_data <- data.frame(
   Data = c("Number of projects", 
            "Number of organizations", 
