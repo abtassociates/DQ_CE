@@ -220,6 +220,23 @@ counts_by_week %>%
 
 ```{r fig.width=10, fig.height=5}
 
+counts_by_week %>%
+  filter(str_detect(Event, " upload")) %>%
+  ggplot(aes(x = WeekEnding, y = n, fill = Event, color = Event, label = n)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_x_date(date_breaks = "1 week", date_labels = "%m-%d") +
+  labs(title = "Eva Uploads",
+       x = "Week Ending",
+       y = "") +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  guides(color = guide_legend(ncol = 2))
+  
+
+```
+
+```{r fig.width=10, fig.height=5}
+
 counts_category %>%
   filter(str_detect(EventCategory, " upload")) %>%
   ggplot(aes(x = WeekEnding, y = n, group = EventCategory, color = EventCategory, label = n)) +
