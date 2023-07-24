@@ -46,7 +46,37 @@ source(paste0(directory, "02_export_dates.R"))
 
 source(paste0(directory, "04_initial_data_prep.R"))
 
-# Sample data table ---------------------------------------------------------
+# Sample data  ---------------------------------------------------------
+
+# Age at Entry -------------------------------------------------------------
+
+small_client <- Client %>% select(PersonalID, DOB)
+enrollment_with_age <- Enrollment %>%
+  left_join(small_client, by = "PersonalID") %>%
+  mutate(AgeAtEntry = age_years(DOB, EntryDate))
+
+# Base DQ Data --------------------------------------------------------------
+
+base_dq_data <- Enrollment %>%
+  left_join(Client %>%
+              select(-DateCreated), by = "PersonalID") %>%
+  left_join(Project %>% select(ProjectID, TrackingMethod, OrganizationName),
+            by = "ProjectID") %>%
+  select(
+    PersonalID,
+    EnrollmentID,
+    ProjectID,
+    EntryDate,
+    HouseholdID,
+    MoveInDate,
+    ExitDate,
+    Destination,
+    ExitAdjust,
+    DateCreated,
+    ProjectType
+    ) 
+
+# Project Descriptor Numbers ------------------------------------------------
 
 organizations <- Project0 %>%
   distinct(OrganizationID) %>%
@@ -59,6 +89,14 @@ projects <- Project0 %>%
 enrollments <- Enrollment %>%
   distinct(EnrollmentID) %>%
   n_distinct()
+
+# Client information numbers ---------------------------------------------
+
+clients <- Client %>%
+  distinct(PersonalID) %>%
+  n_distinct()
+
+# Number of enrollments --------------------------------------------
 
 ES_enrollments <- Enrollment %>%
   group_by(ProjectType) %>%
@@ -203,11 +241,6 @@ CE_stayers <- Enrollment %>%
   distinct(EnrollmentID) %>%
   n_distinct()
 
-services <- Services %>%
-  distinct(ServicesID) %>%
-  n_distinct()
-print(services)
-
 mult_enrollments <- Enrollment %>%
   group_by(PersonalID) %>%
   summarise(NumEnrollmentID = n()) %>%
@@ -215,25 +248,149 @@ mult_enrollments <- Enrollment %>%
   summarise(NumPersonalID = n()) %>%
   pull(NumPersonalID)
 
-# Gender information ----------------------------
+# Number of Services -----------------------------------------------
 
-gender_df <- Client %>%
+services <- Services %>%
+  distinct(ServicesID) %>%
+  n_distinct()
+print(services)
+
+# Race information -----------------------------------------------
+
+race_df <- Client %>%
   select(AmIndAKNative,
          Asian,
          BlackAfAmerican,
          NativeHIPacific,
          White)
+number_races <- as.data.frame(colSums(race_df))
+colnames(number_races) <- c("Count")
 
-number_genders <- colSums(gender_df)
+count_racenone <- sum(Client$RaceNone == "99", na.rm = TRUE)
+racenone_df <- data.frame(RaceNone = count_racenone)
+colnames(racenone_df) <- c("Count")
 
-min_gender <- min(number_genders)
-print (min_gender)
+number_races_df <- rbind(number_races, racenone_df)
+min_race <- min(number_races_df)
 
+mult_race <- Client %>%
+  select(PersonalID,
+         AmIndAKNative,
+         Asian,
+         BlackAfAmerican,
+         NativeHIPacific,
+         White) %>%
+  group_by(PersonalID) %>%
+  filter(AmIndAKNative + Asian + BlackAfAmerican + NativeHIPacific + White > 1) %>%
+  distinct(PersonalID) %>%
+  n_distinct()
+
+# Gender information ----------------------------------------------
+
+gender_df <- Client %>%
+  select(Female,
+         Male,
+         NoSingleGender,
+         Transgender,
+         Questioning)
+number_genders <- as.data.frame(colSums(gender_df))
+colnames(number_genders) <- c("Count")
+
+count_gendernone <- sum(Client$GenderNone == "99", na.rm = TRUE)
+gendernone_df <- data.frame(GenderNone = count_gendernone)
+colnames(gendernone_df) <- c("Count")
+
+number_genders_df <- rbind(number_genders, gendernone_df)
+min_gender <- min(number_genders_df)
+
+# Ethnicity information --------------------------------------------------
+
+count_ethnicity <- table(Client$Ethnicity)
+
+min_ethnicity <- min(count_ethnicity)
+
+# Age information -------------------------------------------------------
+
+small_client <- Client %>% select(PersonalID, DOB)
+enrollment_with_age <- Enrollment %>%
+  left_join(small_client, by = "PersonalID") %>%
+  mutate(AgeAtEntry = age_years(DOB, EntryDate))
+
+# Veteran information ----------------------------------------------------
+
+count_veteran_status <- table(Client$VeteranStatus)
+
+min_veteran_status <- min(count_veteran_status)
+
+# SSVF funded ------------------------------------------------------------
+
+ssvf_funded <- Funder %>%
+  filter(Funder %in% c(ssvf_fund_sources)) %>%
+  pull(ProjectID)
+
+ssvf_base_dq_data <- base_dq_data %>%
+  filter(ProjectID %in% c(ssvf_funded)) %>%
+  select(
+    EnrollmentID,
+    HouseholdID,
+    PersonalID,
+    ProjectID,
+    ProjectType
+  ) %>%
+  left_join(
+    Enrollment %>%
+      select(
+        EnrollmentID,
+        HouseholdID,
+        PersonalID,
+        EntryDate,
+        ExitDate,
+        RelationshipToHoH,
+      ),
+    by = c("PersonalID", "EnrollmentID", "HouseholdID")
+  ) %>%
+  left_join(
+    Client %>%
+      select(
+        PersonalID,
+        VeteranStatus,
+      ),
+    by = "PersonalID"
+  )
+
+SSVF_HP_enrollments <- ssvf_base_dq_data %>%
+  group_by(ProjectType) %>%
+  filter(ProjectType == "12") %>%
+  distinct(EnrollmentID) %>%
+  n_distinct()
+
+SSVF_HP_stayers <- ssvf_base_dq_data %>%
+  group_by(ProjectType) %>%
+  filter(is.na(ExitDate) &
+           ProjectType == "12") %>%
+  distinct(EnrollmentID) %>%
+  n_distinct()
+
+SSVF_RRH_enrollments <- ssvf_base_dq_data %>%
+  group_by(ProjectType) %>%
+  filter(ProjectType == "13") %>%
+  distinct(EnrollmentID) %>%
+  n_distinct()
+
+SSVF_RRH_stayers <- ssvf_base_dq_data %>%
+  group_by(ProjectType) %>%
+  filter(is.na(ExitDate) &
+           ProjectType == "13") %>%
+  distinct(EnrollmentID) %>%
+  n_distinct()
+
+# Sample data table ------------------------------------------------------
 
 sample_data <- data.frame(
   Data = c("Number of projects", 
            "Number of organizations", 
            "Number of enrollments",
+           "Number of clients",
            "Number of ES enrollments",
            "Number of ES stayers",
            "Number of TH enrollments",
@@ -252,15 +409,25 @@ sample_data <- data.frame(
            "Number of SSO stayers",
            "Number of HP enrollments",
            "Number of HP stayers",
+           "Number of SSVF HP enrollments",
+           "Number of SSVF HP stayers",
            "Number of RRH enrollments",
            "Number of RRH stayers",
+           "Number of SSVF RRH enrollments",
+           "Number of SSVF RRH stayers",
            "Number of CE enrollments",
            "Number of CE stayers",
            "Number of services",
-           "Number of clients with multiple enrollments"),
+           "Number of clients with multiple enrollments",
+           "Number of people in smallest race category",
+           "Number of people that selected multiple race categories",
+           "Number of people in smallest gender category",
+           "Number of people in smallest ethnicity category",
+           "Number of people in smallest veteran status category"),
   Number = c(projects, 
              organizations, 
-             projects,
+             enrollments,
+             clients,
              ES_enrollments,
              ES_stayers,
              TH_enrollments,
@@ -279,11 +446,20 @@ sample_data <- data.frame(
              SSO_stayers,
              HP_enrollments,
              HP_stayers,
+             SSVF_HP_enrollments,
+             SSVF_HP_stayers,
              RRH_enrollments,
              RRH_stayers,
+             SSVF_RRH_enrollments,
+             SSVF_RRH_stayers,
              CE_enrollments,
              CE_stayers,
              services,
-             mult_enrollments))
+             mult_enrollments,
+             min_race,
+             mult_race,
+             min_gender,
+             min_ethnicity,
+             min_veteran_status))
 print(sample_data)
 
