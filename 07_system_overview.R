@@ -239,7 +239,7 @@ enrollment_categories <- enrollment_prep_hohs %>%
         !is.na(MoveInDateAdjust) ~ 100,
       ProjectType %in% ph_project_types &
         is.na(MoveInDateAdjust) ~ 80,
-      ProjectType %in% lh_residential_project_types ~ 60,
+      !ProjectType %in% non_res_project_types ~ 60,
       ProjectType %in% non_res_project_types ~ 40,
       TRUE ~ 20
     ),
