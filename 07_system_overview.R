@@ -230,7 +230,6 @@ homeless_cls_finder <- function(date, window = "before", days = 60) {
 # Enrollment-level flags --------------------------------------------------
 # as much wrangling as possible without needing hhtype, project type, and level
 # of detail inputs
-
 enrollment_categories <- enrollment_prep_hohs %>%
   mutate(
     ProjectTypeWeight = case_when(
@@ -890,6 +889,9 @@ clients_enrollments_reactive <- reactive({
 # https://onlinetools.com/time/visualize-date-intervals <- here.
 # add inflow type and active enrollment typed used for system overview plots
 universe <- reactive({
+  browser()
+  # somewhere along the way we're losing the lookback for client 606501
+  
   clients_enrollments_reactive() %>%
     # get rid of rows where the enrollment is neither a lookback enrollment,
     # an eecr, or an lecr. So, keeping all lookback records plus the eecr and lecr 
