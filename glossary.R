@@ -1,4 +1,4 @@
-output$glossary <- renderDataTable({
+output$glossary <- renderDataTable(server = FALSE, {
   gloss <- tribble(
     ~ Focus,
     ~ Term,
@@ -500,9 +500,42 @@ output$glossary <- renderDataTable({
   datatable(
     gloss,
     rownames = FALSE,
+    extensions = 'Buttons',
     options = list(
       searchHighlight = TRUE,
-      order = list(list(0, 'asc'), list(1, 'asc'))
+      order = list(list(0, 'asc'), list(1, 'asc')),
+      dom = 'Blfrtip',
+      buttons = list(list(extend = "pdf",
+                          filename = "Eva Glossary",
+                          title = "Eva Glossary",
+                          customize = JS(
+                            "function(doc) {",
+                            
+                            "pdfMake.Images = {",
+                              "yourimagename: 'eva/www/Eva_logo_horizontal_white.png'",
+                            "}",
+                            
+                            "  doc.content.splice( 0, 0, {",
+                            "    margin: [ 0, 0, 0, 12 ],",
+                            "    alignment: 'center',",
+                            "    image: yourimagename",
+                            "})",
+                            
+                            "doc.styles.title = {",
+                              "fontSize: '40',",
+                              "alignment: 'center'",
+                            "}",
+                            
+                            "doc.styles.tableHeader = {",
+                              "fontSize: '20',",
+                              "alignment: 'left'",
+                            "}",
+                            
+                          "}"
+                            
+                            )
+                          )
+                     )
     )
   )
   
