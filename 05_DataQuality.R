@@ -214,7 +214,6 @@ hh_children_only <- base_dq_data %>%
   distinct(HouseholdID, maxAge, .keep_all = TRUE) %>%
   merge_check_info(checkIDs = 86) %>%
   select(all_of(vars_we_want))
-
 # hh_no_hoh <- base_dq_data %>%
 #   group_by(HouseholdID) %>%
 #   summarise(hasHoH = if_else(min(RelationshipToHoH) != 1,
@@ -229,9 +228,12 @@ hh_children_only <- base_dq_data %>%
 
 base_dq_data_dt <- as.data.table(base_dq_data)
 
-hh_no_hoh_dt <- base_dq_data_dt[, .(hasHoH = ifelse(min(RelationshipToHoH) != 1, FALSE, TRUE),
-                                    PersonalID = min(PersonalID)),
-                                by = HouseholdID]
+hh_no_hoh_dt <-
+  base_dq_data_dt[, .(hasHoH = ifelse(any(RelationshipToHoH == 1, na.rm = TRUE),
+                                      TRUE,
+                                      FALSE),
+                    PersonalID = min(PersonalID)),
+                  by = HouseholdID]
 hh_no_hoh_dt <- hh_no_hoh_dt[hasHoH == FALSE]
 
 hh_no_hoh <- as.data.frame.matrix(
@@ -239,7 +241,6 @@ hh_no_hoh <- as.data.frame.matrix(
 ) %>% 
   merge_check_info(checkIDs = 2) %>%
   select(all_of(vars_we_want))
-
 
 hh_too_many_hohs <- base_dq_data %>%
   filter(RelationshipToHoH == 1) %>%
