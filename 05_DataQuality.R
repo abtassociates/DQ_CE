@@ -900,7 +900,7 @@ missing_income_entry <- base_dq_data %>%
            ProjectID %in% c(projects_require_income) &
            (AgeAtEntry > 17 |
               is.na(AgeAtEntry)) &
-           (is.na(IncomeFromAnySource))) %>%
+           is.na(IncomeFromAnySource)) %>%
   merge_check_info(checkIDs = 87) %>%
   select(all_of(vars_we_want))
 
