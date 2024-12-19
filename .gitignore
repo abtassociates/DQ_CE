@@ -1,8 +1,8 @@
-*.Rproj.user
-*.Rproj
-*.Rhistory
-*.RData
-*.Ruserdata
+.Rproj.user
+.Rproj
+.Rhistory
+.RData
+.Ruserdata
 data
 rsconnect
 comparisons
@@ -32,3 +32,4 @@ tests/temp/
 runShinyApp.R
 .nfs00000000034418240000000c
 vscDebugger
+Rminor_elevated.Rproj
